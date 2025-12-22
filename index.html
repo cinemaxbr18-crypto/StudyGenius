@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyGenius Pro - Estudo Inteligente</title>
+    <title>StudyGenius Pro - Sistema Otimizado</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,32 +12,25 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     
-    <!-- Babel para JSX -->
+    <!-- Babel & Marked -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Marked para Markdown no Chat -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
         
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-
-        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-zoom { animation: zoomIn 0.2s ease-out forwards; }
-
-        /* Scrollbar personalizada */
+        /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
@@ -47,185 +40,102 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- CHAVE DA API ---
-        const API_KEY = "AIzaSyDu251ja-J3-Wbxm4gyECTnFu7bW3272mw";
+        // --- SISTEMA DE API ROBUSTO ---
+        const API_KEY_KEY = 'studygenius_pro_key';
 
-        // --- Ícones SVG ---
-        const Icon = ({ d, className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                <path d={d} />
-            </svg>
-        );
-
+        // Ícones SVG Otimizados
+        const Icon = ({ d, className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d} /></svg>;
         const Icons = {
-            Book: (props) => <Icon {...props} d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />,
-            Brain: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
-            Lightbulb: (props) => <Icon {...props} d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2.4 1.5-3.8 0-3.2-2.8-6-6-6S6 4.8 6 8c0 1.4.5 2.8 1.5 3.8.8.8 1.3 1.5 1.5 2.5 M9 18h6 M10 22h4" />,
-            Check: (props) => <Icon {...props} d="M20 6L9 17l-5-5" />,
-            X: (props) => <Icon {...props} d="M18 6L6 18M6 6l12 12" />,
-            ArrowRight: (props) => <Icon {...props} d="M5 12h14M12 5l7 7-7 7" />,
-            ArrowLeft: (props) => <Icon {...props} d="M19 12H5M12 19l-7-7 7-7" />,
-            Loader: (props) => <Icon {...props} d="M21 12a9 9 0 1 1-6.219-8.56" />,
-            ChatBubble: (props) => <Icon {...props} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />,
-            Send: (props) => <Icon {...props} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />,
-            Maximize: (props) => <Icon {...props} d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />,
-            Minimize: (props) => <Icon {...props} d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />,
-            Download: (props) => <Icon {...props} d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
-            Settings: (props) => <Icon {...props} d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" /> // Simplified settings icon
+            Brain: () => <Icon d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" className="w-6 h-6"/>,
+            Book: () => <Icon d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" className="w-6 h-6"/>,
+            Check: () => <Icon d="M20 6L9 17l-5-5" className="w-5 h-5"/>,
+            X: () => <Icon d="M18 6L6 18M6 6l12 12" className="w-5 h-5"/>,
+            ArrowLeft: () => <Icon d="M19 12H5M12 19l-7-7 7-7" className="w-5 h-5"/>,
+            ArrowRight: () => <Icon d="M5 12h14M12 5l7 7-7 7" className="w-5 h-5"/>,
+            Settings: () => <Icon d="M12.22 2h-.44a2 2 0 0 1-2 2 2 2 0 0 0-2 2 2 2 0 0 1-2 2 2 2 0 0 0-2 2 2 2 0 0 1-2 2v.44a2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 1 2 2h.44a2 2 0 0 1 2-2 2 2 0 0 0 2-2 2 2 0 0 1 2-2 2 2 0 0 0 2-2 2 2 0 0 1 2-2v-.44a2 2 0 0 1-2-2 2 2 0 0 0-2-2 2 2 0 0 1-2-2 2 2 0 0 0-2-2 2 2 0 0 1-2-2z" className="w-5 h-5"/>,
+            Chat: () => <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" className="w-6 h-6"/>,
+            Send: () => <Icon d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" className="w-5 h-5"/>,
+            Lightbulb: () => <Icon d="M9 18h6M10 22h4M15 14a3 3 0 0 0-3-3 3 3 0 0 0-3 3 6 6 0 0 0 6 0z" className="w-5 h-5"/>,
+            Download: () => <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" className="w-5 h-5"/>,
+            Maximize: () => <Icon d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" className="w-5 h-5"/>,
+            Minimize: () => <Icon d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" className="w-5 h-5"/>
         };
 
-        // --- Funções da API ---
+        // --- MOTOR DE API COM RETRY (SOLUÇÃO PARA O ERRO 429) ---
         const callGemini = async (prompt) => {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            } catch (error) {
-                console.error("Erro API:", error);
-                throw error;
+            const apiKey = localStorage.getItem(API_KEY_KEY);
+            if (!apiKey) throw new Error("NO_KEY");
+
+            // Usa o modelo 'flash' que é mais rápido e econômico
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            let attempts = 0;
+            const maxAttempts = 3;
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    if (response.status === 429) {
+                        attempts++;
+                        // Espera exponencial (1s, 2s, 4s) antes de tentar de novo
+                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts)));
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error?.message || "Erro desconhecido na API");
+                    }
+
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                } catch (error) {
+                    if (attempts === maxAttempts - 1) throw error;
+                    attempts++;
+                }
             }
         };
 
-        const parseJSONFromAI = (text) => {
+        const extractJSON = (text) => {
             try {
-                const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
-                return JSON.parse(jsonMatch ? jsonMatch[1] : text);
+                const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
+                return JSON.parse(match ? match[1] : text);
             } catch (e) { return null; }
         };
 
-        // --- Componente Chat Tutor (Popup e Fullscreen) ---
-        const ChatTutor = ({ currentTopic }) => {
-            const [viewMode, setViewMode] = useState('closed'); // 'closed', 'popup', 'full'
-            const [messages, setMessages] = useState([
-                { role: 'ai', text: 'Olá! Sou seu tutor virtual. Se tiver dúvida sobre o conteúdo, é só perguntar aqui!' }
-            ]);
-            const [input, setInput] = useState('');
-            const [loading, setLoading] = useState(false);
-            const messagesEndRef = useRef(null);
+        // --- COMPONENTES AUXILIARES ---
 
-            const scrollToBottom = () => {
-                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-            };
-
-            useEffect(scrollToBottom, [messages, viewMode]);
-
-            const handleSend = async () => {
-                if (!input.trim() || loading) return;
-                
-                const userText = input;
-                setInput('');
-                setMessages(prev => [...prev, { role: 'user', text: userText }]);
-                setLoading(true);
-
-                const prompt = `
-                    Você é um tutor paciente e didático ajudando um aluno que está estudando sobre: "${currentTopic || 'Geral'}".
-                    O aluno perguntou: "${userText}"
-                    Responda de forma clara, concisa e encorajadora. Use formatação Markdown (negrito, listas) se necessário.
-                `;
-
-                try {
-                    const aiResponse = await callGemini(prompt);
-                    setMessages(prev => [...prev, { role: 'ai', text: aiResponse }]);
-                } catch (e) {
-                    setMessages(prev => [...prev, { role: 'ai', text: 'Ops, tive um problema de conexão. Tente novamente.' }]);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            // Se estiver fechado, mostra só o botão
-            if (viewMode === 'closed') {
-                return (
-                    <div className="fixed bottom-6 right-6 z-50">
-                        <button 
-                            onClick={() => setViewMode('popup')}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 transition-all hover:scale-110 active:scale-95 flex items-center justify-center gap-2 group"
-                        >
-                            <Icons.ChatBubble className="w-6 h-6" />
-                            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 font-bold whitespace-nowrap">Tutor IA</span>
-                        </button>
-                    </div>
-                );
-            }
-
-            // Classes baseadas no modo (Popup vs Full)
-            const containerClasses = viewMode === 'full' 
-                ? "fixed inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in"
-                : "fixed bottom-6 right-6 z-50 w-80 sm:w-96 h-[500px] animate-slide-up bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden";
-            
-            const innerClasses = viewMode === 'full'
-                ? "w-full max-w-4xl h-full max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-                : "w-full h-full flex flex-col";
-
+        const ModalKey = ({ onClose }) => {
+            const [key, setKey] = useState('');
             return (
-                <div className={containerClasses}>
-                    <div className={innerClasses}>
-                        {/* Header Chat */}
-                        <div className="bg-indigo-600 p-4 flex justify-between items-center text-white shrink-0">
-                            <div className="flex items-center gap-2">
-                                <Icons.Brain className="w-6 h-6" />
-                                <div>
-                                    <span className="font-bold block leading-none">Tutor IA</span>
-                                    <span className="text-xs text-indigo-200 opacity-80">{currentTopic ? (currentTopic.length > 20 ? currentTopic.substring(0,20)+'...' : currentTopic) : 'Geral'}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => setViewMode(viewMode === 'full' ? 'popup' : 'full')} 
-                                    className="hover:bg-indigo-500 p-1.5 rounded transition-colors"
-                                    title={viewMode === 'full' ? "Minimizar" : "Expandir"}
-                                >
-                                    {viewMode === 'full' ? <Icons.Minimize className="w-5 h-5" /> : <Icons.Maximize className="w-5 h-5" />}
-                                </button>
-                                <button onClick={() => setViewMode('closed')} className="hover:bg-indigo-500 p-1.5 rounded transition-colors">
-                                    <Icons.X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Área de Mensagens */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 custom-scroll">
-                            {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
-                                        m.role === 'user' 
-                                        ? 'bg-indigo-600 text-white rounded-br-none shadow-md' 
-                                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-200 shadow-sm prose prose-sm max-w-none'
-                                    }`}>
-                                        <div dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} />
-                                    </div>
-                                </div>
-                            ))}
-                            {loading && (
-                                <div className="flex justify-start">
-                                    <div className="bg-white p-3 rounded-2xl rounded-bl-none border border-gray-200 text-gray-400 text-xs italic flex items-center gap-2">
-                                        <Icons.Loader className="w-3 h-3 animate-spin" /> Digitando...
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Input Area */}
-                        <div className="p-4 bg-white border-t border-gray-100 flex gap-2 shrink-0">
-                            <input 
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Tire sua dúvida..." 
-                                className="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
-                            />
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                        <h2 className="text-xl font-bold text-slate-800 mb-2">Configurar Chave API</h2>
+                        <p className="text-slate-500 text-sm mb-4">Para usar a IA, você precisa de uma chave do Google Gemini.</p>
+                        <input 
+                            type="password" 
+                            value={key}
+                            onChange={e => setKey(e.target.value)}
+                            placeholder="Cole sua chave AIza..."
+                            className="w-full p-3 border border-slate-300 rounded-xl mb-4 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={onClose} className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl">Cancelar</button>
                             <button 
-                                onClick={handleSend}
-                                disabled={loading || !input.trim()}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded-xl transition-colors disabled:opacity-50"
+                                onClick={() => {
+                                    if(key.trim().length > 10) {
+                                        localStorage.setItem(API_KEY_KEY, key.trim());
+                                        window.location.reload();
+                                    }
+                                }} 
+                                className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700"
                             >
-                                <Icons.Send className="w-5 h-5" />
+                                Salvar
                             </button>
                         </div>
                     </div>
@@ -233,396 +143,348 @@
             );
         };
 
-        // --- Componente Principal ---
-        function StudyGenius() {
-            const [view, setView] = useState('home');
-            const [topics, setTopics] = useState('');
+        const ChatTutor = ({ currentTopic }) => {
+            const [mode, setMode] = useState('closed'); // closed, popup, full
+            const [messages, setMessages] = useState([{ role: 'ai', text: 'Olá! Sou seu tutor. Dúvidas?' }]);
+            const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
+            const scrollRef = useRef();
 
-            // Configurações do Quiz
-            const [quizConfig, setQuizConfig] = useState({
-                count: 5,
-                difficulty: 'Intermediário'
-            });
-            
-            // Dados
-            const [flashcards, setFlashcards] = useState([]);
-            const [quizQuestions, setQuizQuestions] = useState([]);
-            const [quizResults, setQuizResults] = useState(null);
-            const [analysis, setAnalysis] = useState(null);
+            useEffect(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages, mode]);
 
-            // Controle
-            const [currentCardIndex, setCurrentCardIndex] = useState(0);
-            const [isFlipped, setIsFlipped] = useState(false);
-            const [quizAnswers, setQuizAnswers] = useState({});
-            const [hintsRevealed, setHintsRevealed] = useState({});
-
-            // Geração de Flashcards
-            const handleGenerateFlashcards = async (customTopic = null) => {
-                const topicToUse = customTopic || topics;
-                if (!topicToUse.trim()) { setError("Digite um tópico para começar."); return; }
-                setLoading(true); setError('');
-
-                const prompt = `Crie 8 flashcards didáticos sobre: "${topicToUse}". Retorne APENAS Array JSON: [{"front": "Pergunta", "back": "Resposta"}]`;
-
-                try {
-                    const text = await callGemini(prompt);
-                    const data = parseJSONFromAI(text);
-                    if (data) {
-                        setFlashcards(data);
-                        setCurrentCardIndex(0);
-                        setIsFlipped(false);
-                        setView('flashcards');
-                    } else throw new Error("Falha ao gerar dados.");
-                } catch (err) { setError("Erro ao conectar. Tente novamente."); }
-                finally { setLoading(false); }
-            };
-
-            // Geração de Quiz (Com Configuração)
-            const handleGenerateQuiz = async () => {
-                if (!topics.trim()) { setError("Digite um tópico primeiro."); return; }
-                setLoading(true); setError('');
-
-                const prompt = `
-                    Crie um quiz com EXATAMENTE ${quizConfig.count} perguntas de nível ${quizConfig.difficulty} sobre: "${topics}". 
-                    Retorne APENAS Array JSON: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "hint": "...", "explanation": "..."}]
-                `;
-
-                try {
-                    const text = await callGemini(prompt);
-                    const data = parseJSONFromAI(text);
-                    if (data && Array.isArray(data)) {
-                        setQuizQuestions(data);
-                        setQuizAnswers({});
-                        setHintsRevealed({});
-                        setQuizResults(null);
-                        setView('quiz');
-                    } else throw new Error("Falha ao gerar quiz.");
-                } catch (err) { setError("Erro ao conectar. Tente novamente."); }
-                finally { setLoading(false); }
-            };
-
-            // Submissão de Quiz
-            const handleSubmitQuiz = async () => {
-                let score = 0;
-                const report = quizQuestions.map((q, idx) => {
-                    const isCorrect = quizAnswers[idx] === q.correctIndex;
-                    if (isCorrect) score++;
-                    return { 
-                        q: q.question, 
-                        correct: isCorrect, 
-                        userAns: q.options[quizAnswers[idx]],
-                        correctAns: q.options[q.correctIndex] 
-                    };
-                });
-                
-                setQuizResults({ score, total: quizQuestions.length, report });
+            const send = async () => {
+                if(!input.trim() || loading) return;
+                const text = input;
+                setInput('');
+                setMessages(p => [...p, { role: 'user', text }]);
                 setLoading(true);
 
-                const prompt = `Analise este resultado de quiz sobre "${topics}": ${score}/${quizQuestions.length} acertos. Erros: ${JSON.stringify(report.filter(r => !r.correct))}. Retorne JSON: {"feedback": "...", "weakPoints": ["Tópico 1", "Tópico 2"], "studyPlan": "..."}`;
+                try {
+                    const prompt = `Atue como tutor de "${currentTopic || 'Geral'}". Pergunta: "${text}". Responda de forma didática e curta. Use Markdown.`;
+                    const res = await callGemini(prompt);
+                    setMessages(p => [...p, { role: 'ai', text: res }]);
+                } catch (e) {
+                    setMessages(p => [...p, { role: 'ai', text: "Erro de conexão. Verifique sua chave." }]);
+                } finally { setLoading(false); }
+            };
 
+            if(mode === 'closed') return (
+                <button onClick={() => setMode('popup')} className="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-all z-50">
+                    <Icons.Chat />
+                </button>
+            );
+
+            const isFull = mode === 'full';
+            const containerClass = isFull 
+                ? "fixed inset-0 z-[60] bg-white flex flex-col animate-fade-in"
+                : "fixed bottom-6 right-6 z-[60] w-96 h-[500px] bg-white rounded-2xl shadow-2xl border flex flex-col animate-fade-in overflow-hidden";
+
+            return (
+                <div className={containerClass}>
+                    <div className="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2 font-bold"><Icons.Brain /> Tutor IA</div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setMode(isFull ? 'popup' : 'full')} className="p-1 hover:bg-white/20 rounded">
+                                {isFull ? <Icons.Minimize /> : <Icons.Maximize />}
+                            </button>
+                            <button onClick={() => setMode('closed')} className="p-1 hover:bg-white/20 rounded"><Icons.X /></button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 custom-scroll">
+                        {messages.map((m, i) => (
+                            <div key={i} className={`p-3 rounded-2xl text-sm max-w-[85%] ${m.role === 'user' ? 'bg-indigo-600 text-white self-end ml-auto rounded-br-none' : 'bg-white border text-slate-800 rounded-bl-none'}`}>
+                                <div dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} />
+                            </div>
+                        ))}
+                        {loading && <div className="text-xs text-slate-400 italic">Digitando...</div>}
+                        <div ref={scrollRef} />
+                    </div>
+                    <div className="p-3 border-t bg-white flex gap-2 shrink-0">
+                        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Digite sua dúvida..." className="flex-1 bg-slate-100 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                        <button onClick={send} className="bg-indigo-600 text-white p-2 rounded-xl"><Icons.Send /></button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- APP PRINCIPAL ---
+        function App() {
+            const [view, setView] = useState('home');
+            const [showKeyModal, setShowKeyModal] = useState(false);
+            const [loading, setLoading] = useState(false);
+            const [topics, setTopics] = useState('');
+            const [errorMsg, setErrorMsg] = useState('');
+            
+            // Estados de Dados
+            const [quizConfig, setQuizConfig] = useState({ count: 5, difficulty: 'Intermediário' });
+            const [flashcards, setFlashcards] = useState([]);
+            const [quizData, setQuizData] = useState([]);
+            const [quizAnswers, setQuizAnswers] = useState({});
+            const [quizResult, setQuizResult] = useState(null);
+            const [analysis, setAnalysis] = useState(null);
+            
+            // Controle UI
+            const [cardIdx, setCardIdx] = useState(0);
+            const [flipped, setFlipped] = useState(false);
+            const [hints, setHints] = useState({});
+
+            // Checar chave ao iniciar
+            useEffect(() => {
+                if (!localStorage.getItem(API_KEY_KEY)) setShowKeyModal(true);
+            }, []);
+
+            const handleError = (e) => {
+                setLoading(false);
+                if (e.message === "NO_KEY") setShowKeyModal(true);
+                else setErrorMsg(`Erro: ${e.message}. Verifique sua chave ou conexão.`);
+            };
+
+            const generateFlashcards = async (customTopic) => {
+                const target = customTopic || topics;
+                if(!target.trim()) return setErrorMsg("Digite um tópico.");
+                setLoading(true); setErrorMsg('');
+
+                const prompt = `Gere 8 flashcards sobre "${target}". Verifique fatos 3x. Retorne JSON Array: [{"front": "pergunta", "back": "resposta"}]`;
                 try {
                     const text = await callGemini(prompt);
-                    setAnalysis(parseJSONFromAI(text));
-                    setView('analysis');
-                } catch (err) { setError("Erro na análise."); }
+                    const json = extractJSON(text);
+                    if(json) { setFlashcards(json); setCardIdx(0); setFlipped(false); setView('flashcards'); }
+                    else throw new Error("Falha ao ler resposta da IA");
+                } catch(e) { handleError(e); } 
                 finally { setLoading(false); }
             };
 
-            // Exportar Resultado
+            const generateQuiz = async () => {
+                if(!topics.trim()) return setErrorMsg("Digite um tópico.");
+                setLoading(true); setErrorMsg('');
+
+                const prompt = `Gere um quiz de ${quizConfig.count} perguntas nível ${quizConfig.difficulty} sobre "${topics}". Verifique se há apenas uma resposta correta. Retorne JSON Array: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "hint": "...", "explanation": "..."}]`;
+                try {
+                    const text = await callGemini(prompt);
+                    const json = extractJSON(text);
+                    if(json) { setQuizData(json); setQuizAnswers({}); setHints({}); setView('quiz'); }
+                    else throw new Error("Falha ao gerar quiz");
+                } catch(e) { handleError(e); }
+                finally { setLoading(false); }
+            };
+
+            const finishQuiz = async () => {
+                let score = 0;
+                const report = quizData.map((q, i) => {
+                    const correct = quizAnswers[i] === q.correctIndex;
+                    if(correct) score++;
+                    return { q: q.question, correct, user: q.options[quizAnswers[i]], correctAns: q.options[q.correctIndex], explanation: q.explanation };
+                });
+                setQuizResult({ score, total: quizData.length, report });
+                setLoading(true);
+
+                const prompt = `Analise: Tópico "${topics}", Nota ${score}/${quizData.length}. JSON: {"feedback": "...", "weakPoints": ["..."], "studyPlan": "..."}`;
+                try {
+                    const text = await callGemini(prompt);
+                    setAnalysis(extractJSON(text));
+                    setView('analysis');
+                } catch(e) { handleError(e); }
+                finally { setLoading(false); }
+            };
+
             const downloadReport = () => {
-                if (!analysis) return;
-                const content = `
-RELATÓRIO DE ESTUDOS - STUDYGENIUS
-----------------------------------
-Tópico: ${topics}
-Nota: ${quizResults.score}/${quizResults.total}
-
-FEEDBACK:
-${analysis.feedback}
-
-PONTOS A MELHORAR:
-${analysis.weakPoints.map(p => `- ${p}`).join('\n')}
-
-PLANO DE ESTUDO:
-${analysis.studyPlan}
-                `;
-                const blob = new Blob([content], { type: 'text/plain' });
+                if(!analysis) return;
+                const text = `STUDYGENIUS REPORT\nTópico: ${topics}\nNota: ${quizResult.score}/${quizResult.total}\n\nFEEDBACK:\n${analysis.feedback}\n\nPLANO:\n${analysis.studyPlan}`;
+                const blob = new Blob([text], {type: 'text/plain'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `Estudo-${new Date().toISOString().slice(0,10)}.txt`;
+                a.download = `Report-${topics}.txt`;
                 a.click();
             };
 
-            // --- Views ---
-
-            const renderHome = () => (
-                <div className="max-w-3xl mx-auto space-y-8 animate-in py-10">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500 pb-2">
-                        StudyGenius
-                        </h1>
-                        <p className="text-slate-500 text-xl font-medium">Configure seu estudo e aprenda qualquer coisa.</p>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl shadow-xl shadow-indigo-100 border border-indigo-50">
-                        <textarea
-                            value={topics}
-                            onChange={(e) => setTopics(e.target.value)}
-                            placeholder="Ex: Física Quântica, História do Brasil, Verbos em Inglês..."
-                            className="w-full h-32 p-4 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 focus:outline-none resize-none transition-all text-lg text-slate-800 placeholder-slate-400 mb-4"
-                        />
-                        
-                        {/* Configurações do Quiz */}
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Qtd. Questões</label>
-                                <select 
-                                    value={quizConfig.count}
-                                    onChange={(e) => setQuizConfig({...quizConfig, count: parseInt(e.target.value)})}
-                                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    <option value={5}>5 Questões</option>
-                                    <option value={10}>10 Questões</option>
-                                    <option value={15}>15 Questões</option>
-                                    <option value={20}>20 Questões</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dificuldade</label>
-                                <select 
-                                    value={quizConfig.difficulty}
-                                    onChange={(e) => setQuizConfig({...quizConfig, difficulty: e.target.value})}
-                                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    <option value="Iniciante">Iniciante</option>
-                                    <option value="Intermediário">Intermediário</option>
-                                    <option value="Avançado">Avançado</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {error && <p className="text-red-500 text-sm mt-4 font-bold bg-red-50 p-2 rounded-lg text-center">{error}</p>}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button onClick={() => handleGenerateFlashcards()} className="flex items-center justify-center gap-3 p-5 bg-white border-2 border-indigo-100 hover:border-indigo-500 hover:bg-indigo-50 rounded-2xl transition-all group shadow-sm">
-                            <div className="bg-indigo-100 p-2 rounded-xl group-hover:bg-indigo-200 transition-colors"><Icons.Book className="w-6 h-6 text-indigo-600" /></div>
-                            <span className="font-bold text-slate-700 text-lg">Criar Flashcards</span>
-                        </button>
-
-                        <button onClick={handleGenerateQuiz} className="flex items-center justify-center gap-3 p-5 bg-white border-2 border-blue-100 hover:border-blue-500 hover:bg-blue-50 rounded-2xl transition-all group shadow-sm">
-                            <div className="bg-blue-100 p-2 rounded-xl group-hover:bg-blue-200 transition-colors"><Icons.Brain className="w-6 h-6 text-blue-600" /></div>
-                            <div className="text-left">
-                                <span className="font-bold text-slate-700 text-lg block leading-none">Gerar Quiz</span>
-                                <span className="text-xs text-slate-400 font-medium">{quizConfig.count} perguntas • {quizConfig.difficulty}</span>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-            );
-
-            const renderFlashcards = () => (
-                <div className="max-w-xl mx-auto h-full flex flex-col items-center justify-center space-y-8 py-10">
-                    <div className="w-full flex justify-between items-center">
-                        <button onClick={() => setView('home')} className="text-slate-400 hover:text-indigo-600 flex items-center gap-2 font-bold transition-colors">
-                            <Icons.ArrowLeft className="w-5 h-5" /> Voltar
-                        </button>
-                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold tracking-wider">
-                            CARD {currentCardIndex + 1} / {flashcards.length}
-                        </span>
-                    </div>
-
-                    <div className="w-full aspect-[3/2] perspective-1000 cursor-pointer group" onClick={() => setIsFlipped(!isFlipped)}>
-                        <div className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-2xl shadow-indigo-200/50 rounded-3xl ${isFlipped ? 'rotate-y-180' : ''}`}>
-                            <div className="absolute inset-0 bg-white rounded-3xl p-8 flex flex-col items-center justify-center backface-hidden border border-indigo-50">
-                                <span className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Conceito</span>
-                                <p className="text-2xl font-bold text-center text-slate-800">{flashcards[currentCardIndex].front}</p>
-                                <p className="absolute bottom-6 text-slate-300 text-sm">Toque para virar</p>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-3xl p-8 flex flex-col items-center justify-center backface-hidden rotate-y-180">
-                                <span className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-4">Explicação</span>
-                                <p className="text-xl font-medium text-center">{flashcards[currentCardIndex].back}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <button onClick={() => { if(currentCardIndex>0){ setCurrentCardIndex(c=>c-1); setIsFlipped(false); } }} disabled={currentCardIndex===0} className="p-4 bg-white rounded-full shadow-lg disabled:opacity-50 hover:bg-slate-50 transition-all"><Icons.ArrowLeft className="w-6 h-6" /></button>
-                        <button onClick={() => setIsFlipped(!isFlipped)} className="px-8 bg-slate-800 text-white rounded-full font-bold shadow-lg hover:bg-slate-900 transition-all">Virar</button>
-                        <button onClick={() => { if(currentCardIndex<flashcards.length-1){ setCurrentCardIndex(c=>c+1); setIsFlipped(false); } }} disabled={currentCardIndex===flashcards.length-1} className="p-4 bg-white rounded-full shadow-lg disabled:opacity-50 hover:bg-slate-50 transition-all"><Icons.ArrowRight className="w-6 h-6" /></button>
-                    </div>
-                </div>
-            );
-
-            const renderQuiz = () => (
-                <div className="max-w-2xl mx-auto pb-24 py-10">
-                    <div className="flex items-center justify-between mb-8">
-                        <button onClick={() => setView('home')} className="text-slate-400 hover:text-red-500 flex items-center gap-2 font-bold transition-colors">
-                            <Icons.ArrowLeft className="w-5 h-5" /> Cancelar
-                        </button>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            Progresso: {Object.keys(quizAnswers).length} / {quizQuestions.length}
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        {quizQuestions.map((q, idx) => (
-                            <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                                <h3 className="text-lg font-bold text-slate-800 mb-4 flex gap-3">
-                                    <span className="bg-slate-100 text-slate-600 w-7 h-7 flex items-center justify-center rounded-lg text-sm shrink-0">{idx + 1}</span>
-                                    {q.question}
-                                </h3>
-                                <div className="grid gap-3 ml-10">
-                                    {q.options.map((opt, optIdx) => (
-                                        <button 
-                                            key={optIdx} 
-                                            onClick={() => setQuizAnswers(prev => ({...prev, [idx]: optIdx}))}
-                                            className={`text-left px-4 py-3 rounded-xl border transition-all font-medium ${
-                                                quizAnswers[idx] === optIdx 
-                                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' 
-                                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {opt}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="ml-10 mt-4">
-                                    {!hintsRevealed[idx] ? (
-                                        <button onClick={() => setHintsRevealed(p => ({...p, [idx]: true}))} className="text-xs font-bold text-amber-500 flex items-center gap-1 hover:text-amber-600 transition-colors">
-                                            <Icons.Lightbulb className="w-4 h-4" /> Ver Dica
-                                        </button>
-                                    ) : (
-                                        <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-800 border border-amber-100 animate-in">
-                                            💡 {q.hint}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="fixed bottom-0 left-0 w-full bg-white border-t p-4 z-10 flex justify-center">
-                        <button onClick={handleSubmitQuiz} disabled={Object.keys(quizAnswers).length !== quizQuestions.length} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-10 rounded-xl shadow-xl disabled:opacity-50 disabled:grayscale transition-all flex items-center gap-2">
-                            {loading ? <Icons.Loader className="w-5 h-5 animate-spin" /> : <Icons.Check className="w-5 h-5" />} Finalizar Quiz
-                        </button>
-                    </div>
-                </div>
-            );
-
-            const renderAnalysis = () => (
-                <div className="max-w-3xl mx-auto space-y-8 animate-in py-10 pb-20">
-                    <div className="text-center">
-                        <h2 className="text-3xl font-black text-slate-800">Resultado</h2>
-                        <div className="text-5xl font-black text-indigo-600 mt-2">{quizResults?.score} / {quizResults?.total}</div>
-                    </div>
-
-                    <div className="bg-white p-8 rounded-3xl border border-indigo-100 shadow-xl relative overflow-hidden">
-                        <div className="relative z-10">
-                            <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2"><Icons.Brain className="w-5 h-5" /> Feedback</h3>
-                            <p className="text-indigo-800 leading-relaxed">{analysis?.feedback}</p>
-                        </div>
-                        <div className="absolute top-0 right-0 p-8 opacity-5"><Icons.Brain className="w-40 h-40" /></div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
-                            <h3 className="font-bold text-red-700 mb-4 flex items-center gap-2"><Icons.X className="w-5 h-5" /> Pontos a Melhorar</h3>
-                            <ul className="space-y-2">
-                                {analysis?.weakPoints?.map((pt, i) => (
-                                    <li key={i} className="flex gap-2 text-red-900 text-sm"><span className="mt-1.5 w-1.5 h-1.5 bg-red-400 rounded-full shrink-0"></span>{pt}</li>
-                                ))}
-                            </ul>
-                        </div>
-                        <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
-                            <h3 className="font-bold text-green-700 mb-4 flex items-center gap-2"><Icons.Book className="w-5 h-5" /> Plano de Estudo</h3>
-                            <p className="text-green-900 text-sm leading-relaxed">{analysis?.studyPlan}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-center">
-                         <button 
-                            onClick={downloadReport}
-                            className="flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-4 py-2 rounded-lg transition-colors border border-indigo-200"
-                        >
-                            <Icons.Download className="w-5 h-5" /> Baixar Resumo (.txt)
-                        </button>
-                    </div>
-                    
-                    {/* --- GABARITO --- */}
-                    <div className="space-y-4 pt-6">
-                        <h3 className="text-2xl font-bold text-slate-800 border-b pb-2">Revisão Detalhada</h3>
-                        <div className="grid gap-4">
-                            {quizResults?.report?.map((item, idx) => (
-                                <div key={idx} className={`p-5 rounded-2xl border-l-4 shadow-sm bg-white ${item.correct ? 'border-green-500' : 'border-red-500'}`}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="font-bold text-slate-800 text-lg">Questão {idx + 1}</p>
-                                        {item.correct 
-                                            ? <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><Icons.Check className="w-3 h-3" /> Correto</span>
-                                            : <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><Icons.X className="w-3 h-3" /> Incorreto</span>
-                                        }
-                                    </div>
-                                    <p className="text-slate-600 font-medium mb-3">{item.q}</p>
-                                    
-                                    <div className="text-sm space-y-2 bg-slate-50 p-3 rounded-lg">
-                                        <p>
-                                            <span className="text-slate-500 block text-xs uppercase font-bold">Sua resposta</span>
-                                            <span className={`font-bold ${item.correct ? 'text-green-600' : 'text-red-600'}`}>{item.userAns}</span>
-                                        </p>
-                                        {!item.correct && (
-                                            <p>
-                                                <span className="text-slate-500 block text-xs uppercase font-bold">Resposta Correta</span>
-                                                <span className="font-bold text-green-600">{item.correctAns}</span>
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-center gap-4 pt-4">
-                        <button onClick={() => handleGenerateFlashcards(analysis?.weakPoints?.join(", "))} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all">Praticar Erros</button>
-                        <button onClick={() => { setTopics(''); setView('home'); }} className="bg-white text-slate-700 px-6 py-3 rounded-xl font-bold border hover:bg-slate-50 transition-all">Novo Assunto</button>
-                    </div>
-                </div>
-            );
-
             return (
-                <div className="min-h-screen pb-20">
+                <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+                    {showKeyModal && <ModalKey onClose={() => setShowKeyModal(false)} />}
+                    
                     {loading && (
-                        <div className="fixed inset-0 bg-white/90 z-[60] flex flex-col items-center justify-center animate-in backdrop-blur-sm">
-                            <Icons.Loader className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
-                            <p className="text-indigo-900 font-bold animate-pulse">A IA está criando seu material...</p>
+                        <div className="fixed inset-0 bg-white/80 z-[80] flex flex-col items-center justify-center backdrop-blur-sm">
+                            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="font-bold text-indigo-900 animate-pulse">IA trabalhando (Verificando Fatos)...</p>
                         </div>
                     )}
 
-                    <header className="bg-white border-b sticky top-0 z-20 h-16 flex items-center">
-                        <div className="max-w-5xl mx-auto px-4 w-full flex justify-between items-center">
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                                <div className="bg-indigo-600 p-1.5 rounded-lg"><Icons.Book className="w-5 h-5 text-white" /></div>
-                                <span className="font-bold text-xl text-slate-800">StudyGenius <span className="text-indigo-600 text-xs bg-indigo-50 px-2 py-0.5 rounded-full align-middle">PRO</span></span>
-                            </div>
+                    <header className="h-16 bg-white border-b flex items-center px-6 justify-between sticky top-0 z-40 shadow-sm">
+                        <div className="flex items-center gap-2 cursor-pointer text-indigo-700" onClick={() => setView('home')}>
+                            <Icons.Brain /> <span className="font-black text-xl">StudyGenius</span>
                         </div>
+                        <button onClick={() => setShowKeyModal(true)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400" title="Configurar API">
+                            <Icons.Settings />
+                        </button>
                     </header>
 
-                    <main className="max-w-5xl mx-auto px-4">
-                        {view === 'home' && renderHome()}
-                        {view === 'flashcards' && renderFlashcards()}
-                        {view === 'quiz' && renderQuiz()}
-                        {view === 'analysis' && renderAnalysis()}
+                    <main className="max-w-5xl mx-auto p-6">
+                        {errorMsg && (
+                            <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 flex justify-between items-center border border-red-100">
+                                <span>{errorMsg}</span>
+                                <button onClick={() => setErrorMsg('')}><Icons.X /></button>
+                            </div>
+                        )}
+
+                        {view === 'home' && (
+                            <div className="py-10 animate-fade-in space-y-8">
+                                <div className="text-center space-y-4">
+                                    <h1 className="text-5xl font-black text-slate-800">Domine qualquer assunto.</h1>
+                                    <p className="text-slate-500 text-lg">Insira o tema e a IA cria seu plano de estudo perfeito.</p>
+                                </div>
+
+                                <div className="bg-white p-8 rounded-3xl shadow-xl border border-indigo-50">
+                                    <textarea 
+                                        value={topics} 
+                                        onChange={e => setTopics(e.target.value)} 
+                                        placeholder="Ex: Revolução Industrial, Física Quântica, Verbos em Inglês..." 
+                                        className="w-full h-32 text-lg p-4 border rounded-xl focus:ring-4 focus:ring-indigo-50 outline-none resize-none mb-6 transition-all"
+                                    />
+                                    
+                                    <div className="grid grid-cols-2 gap-4 pb-6 border-b border-slate-100">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase">Perguntas</label>
+                                            <select value={quizConfig.count} onChange={e => setQuizConfig({...quizConfig, count: e.target.value})} className="w-full mt-1 p-2 bg-slate-50 rounded-lg border font-bold">
+                                                <option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase">Nível</label>
+                                            <select value={quizConfig.difficulty} onChange={e => setQuizConfig({...quizConfig, difficulty: e.target.value})} className="w-full mt-1 p-2 bg-slate-50 rounded-lg border font-bold">
+                                                <option value="Iniciante">Iniciante</option><option value="Intermediário">Intermediário</option><option value="Avançado">Avançado</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                        <button onClick={() => generateFlashcards()} className="p-4 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                                            <Icons.Book /> Flashcards
+                                        </button>
+                                        <button onClick={generateQuiz} className="p-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+                                            <Icons.Brain /> Gerar Quiz
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'flashcards' && (
+                            <div className="py-10 flex flex-col items-center animate-fade-in gap-8">
+                                <div className="w-full flex justify-between items-center text-slate-400 font-bold">
+                                    <button onClick={() => setView('home')} className="flex items-center gap-2 hover:text-indigo-600"><Icons.ArrowLeft /> Voltar</button>
+                                    <span>{cardIdx + 1} / {flashcards.length}</span>
+                                </div>
+                                <div className="w-full max-w-lg aspect-[3/2] perspective-1000 cursor-pointer group" onClick={() => setFlipped(!flipped)}>
+                                    <div className={`relative w-full h-full transform-style-3d transition-all duration-500 shadow-2xl rounded-3xl ${flipped ? 'rotate-y-180' : ''}`}>
+                                        <div className="absolute inset-0 bg-white backface-hidden rounded-3xl p-8 flex items-center justify-center text-center border-2 border-slate-100">
+                                            <p className="text-2xl font-bold text-slate-800">{flashcards[cardIdx].front}</p>
+                                        </div>
+                                        <div className="absolute inset-0 bg-indigo-600 backface-hidden rotate-y-180 rounded-3xl p-8 flex items-center justify-center text-center text-white">
+                                            <p className="text-xl font-medium leading-relaxed">{flashcards[cardIdx].back}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button disabled={cardIdx===0} onClick={() => {setCardIdx(c=>c-1); setFlipped(false)}} className="p-4 bg-white shadow rounded-full disabled:opacity-50"><Icons.ArrowLeft /></button>
+                                    <button onClick={() => setFlipped(!flipped)} className="px-8 bg-slate-800 text-white rounded-full font-bold">Virar</button>
+                                    <button disabled={cardIdx===flashcards.length-1} onClick={() => {setCardIdx(c=>c+1); setFlipped(false)}} className="p-4 bg-white shadow rounded-full disabled:opacity-50"><Icons.ArrowRight /></button>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'quiz' && (
+                            <div className="py-10 animate-fade-in space-y-6 pb-24">
+                                <button onClick={() => setView('home')} className="text-slate-400 font-bold flex items-center gap-2 hover:text-red-500"><Icons.ArrowLeft /> Cancelar Quiz</button>
+                                {quizData.map((q, i) => (
+                                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-lg mb-4 flex gap-3"><span className="bg-slate-100 w-8 h-8 rounded flex items-center justify-center text-sm">{i+1}</span> {q.question}</h3>
+                                        <div className="grid gap-2 pl-11">
+                                            {q.options.map((opt, idx) => (
+                                                <button 
+                                                    key={idx} 
+                                                    onClick={() => setQuizAnswers(prev => ({...prev, [i]: idx}))}
+                                                    className={`p-3 text-left rounded-xl border transition-all ${quizAnswers[i] === idx ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="ml-11 mt-3">
+                                            {!hints[i] ? (
+                                                <button onClick={() => setHints(p => ({...p, [i]: true}))} className="text-xs font-bold text-amber-500 flex items-center gap-1 hover:text-amber-600"><Icons.Lightbulb /> Ver Dica</button>
+                                            ) : (
+                                                <p className="text-sm bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-100">💡 {q.hint}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="fixed bottom-0 left-0 w-full p-4 bg-white/80 backdrop-blur border-t z-30 flex justify-center">
+                                    <button 
+                                        onClick={finishQuiz} 
+                                        disabled={Object.keys(quizAnswers).length !== quizData.length}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-12 py-3 rounded-xl font-bold shadow-xl disabled:opacity-50 flex items-center gap-2 transition-all"
+                                    >
+                                        <Icons.Check /> Finalizar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'analysis' && (
+                            <div className="py-10 animate-fade-in space-y-8 pb-20">
+                                <div className="text-center">
+                                    <h2 className="text-4xl font-black text-slate-800">Resultado</h2>
+                                    <p className="text-6xl font-black text-indigo-600 my-4">{quizResult.score} <span className="text-2xl text-slate-300">/ {quizResult.total}</span></p>
+                                </div>
+
+                                <div className="bg-white p-8 rounded-3xl shadow-xl border border-indigo-50">
+                                    <h3 className="font-bold text-indigo-800 mb-2 flex items-center gap-2"><Icons.Brain /> Análise do Tutor</h3>
+                                    <p className="text-slate-600 leading-relaxed">{analysis.feedback}</p>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
+                                        <h4 className="font-bold text-red-700 mb-4 flex items-center gap-2"><Icons.X /> Pontos Fracos</h4>
+                                        <ul className="space-y-2">{analysis.weakPoints.map((p, i) => <li key={i} className="text-sm text-red-900 flex gap-2"><span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 shrink-0"></span>{p}</li>)}</ul>
+                                    </div>
+                                    <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
+                                        <h4 className="font-bold text-green-700 mb-4 flex items-center gap-2"><Icons.Book /> Plano de Estudo</h4>
+                                        <p className="text-sm text-green-900 leading-relaxed">{analysis.studyPlan}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center gap-4">
+                                    <button onClick={downloadReport} className="flex items-center gap-2 text-indigo-600 font-bold px-6 py-3 border rounded-xl hover:bg-slate-50"><Icons.Download /> Baixar Relatório</button>
+                                    <button onClick={() => { setView('home'); setTopics(''); }} className="bg-slate-900 text-white font-bold px-8 py-3 rounded-xl hover:bg-black shadow-lg">Novo Assunto</button>
+                                </div>
+
+                                <div className="space-y-4 pt-8">
+                                    <h3 className="font-bold text-xl border-b pb-4">Correção Detalhada</h3>
+                                    {quizResult.report.map((r, i) => (
+                                        <div key={i} className={`p-5 rounded-2xl bg-white shadow-sm border-l-4 ${r.correct ? 'border-green-500' : 'border-red-500'}`}>
+                                            <div className="flex justify-between font-bold text-slate-800 mb-2">
+                                                <span>{i+1}. {r.q}</span>
+                                                <span className={r.correct ? 'text-green-600' : 'text-red-600'}>{r.correct ? 'CORRETO' : 'ERRADO'}</span>
+                                            </div>
+                                            <div className="text-sm bg-slate-50 p-3 rounded-lg space-y-1">
+                                                <p>Sua resposta: <span className="font-bold">{r.user}</span></p>
+                                                {!r.correct && <p>Correta: <span className="font-bold text-green-600">{r.correctAns}</span></p>}
+                                                <p className="text-slate-500 italic mt-2 border-t pt-2">{r.explanation}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </main>
 
-                    {/* Chat Tutor Global */}
                     <ChatTutor currentTopic={topics} />
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<StudyGenius />);
+        root.render(<App />);
     </script>
 </body>
 </html>
